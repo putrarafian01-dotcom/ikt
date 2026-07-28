@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0A1B3D">
+<title>Dashboard Performance Area Hasan Basri</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --navy-deep:#0A1B3D;
+    --navy-mid:#123068;
+    --navy-soft:#1C4080;
+    --green:#12A454;
+    --green-soft:#E4F7EC;
+    --yellow:#F0A93C;
+    --yellow-soft:#FDF2E0;
+    --red:#E14B4B;
+    --red-soft:#FCE7E7;
+    --paper:#F3F6FB;
+    --ink:#0A1B3D;
+    --muted:#66738F;
+    --card-radius:18px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+  body{
+    margin:0;
+    background:var(--paper);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);
+    overflow-x:hidden;
+  }
+  #stage{
+    max-width:480px;
+    margin:0 auto;
+    background:var(--paper);
+    padding-bottom:28px;
+    overflow-x:hidden;
+  }
+  .scroll-x{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+  }
+  .scroll-hint{
+    font-size:9.5px;color:var(--navy-mid);background:#eef3fc;border-radius:8px;
+    padding:5px 8px;margin-bottom:6px;display:flex;align-items:center;gap:5px;font-weight:700;
+  }
+
+  /* ---------- toolbar (not part of the shareable image) ---------- */
+  .toolbar{
+    max-width:480px;margin:0 auto;padding:12px 16px;
+    background:#fff;border-bottom:1px dashed #d7deec;
+    display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+    position:sticky;top:0;z-index:10;
+  }
+  .toolbar label{
+    font-size:12.5px;font-weight:600;color:var(--navy-mid);
+    background:var(--green-soft);border:1px solid #bfe8cf;color:#0d7a3d;
+    padding:8px 12px;border-radius:999px;cursor:pointer;
+  }
+  .toolbar input[type=file]{display:none;}
+  .toolbar .hint{font-size:11px;color:var(--muted);flex:1 1 180px;}
+  .toolbar .reset{
+    font-size:12px;color:#8a95ad;background:none;border:1px solid #dde3ee;
+    padding:7px 10px;border-radius:999px;cursor:pointer;
+  }
+
+  /* ---------- header ---------- */
+  header{
+    background:linear-gradient(160deg,var(--navy-deep) 0%,var(--navy-soft) 100%);
+    padding:30px 22px 26px;
+    color:#fff;
+    position:relative;
+    overflow:hidden;
+  }
+  header::after{
+    content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;
+    border-radius:50%;background:rgba(255,255,255,0.06);
+  }
+  .hdr-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .hdr-icon{
+    width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,0.12);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .hdr-eyebrow{font-size:11.5px;letter-spacing:.14em;color:#9db3e0;font-weight:700;text-transform:uppercase;}
+  h1{font-size:23px;line-height:1.22;margin:2px 0 8px;font-weight:800;letter-spacing:-.01em;}
+  .hdr-sub{font-size:13px;color:#c3d1ee;font-weight:500;}
+  .hdr-kpis{display:flex;gap:8px;margin-top:18px;}
+  .hdr-kpi{
+    flex:1;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.14);
+    border-radius:13px;padding:10px 8px;text-align:center;
+  }
+  .hdr-kpi .v{font-size:16px;font-weight:800;}
+  .hdr-kpi .l{font-size:9.5px;color:#aebde2;margin-top:2px;text-transform:uppercase;letter-spacing:.05em;}
+
+  section{padding:16px 16px 4px;}
+  .section-title{
+    font-size:13.5px;font-weight:800;color:var(--navy-deep);
+    display:flex;align-items:center;gap:7px;margin:6px 2px 10px;
+    text-transform:uppercase;letter-spacing:.03em;
+  }
+  .section-title .bar{width:4px;height:14px;border-radius:3px;background:var(--green);display:inline-block;}
+
+  .card{
+    background:#fff;border-radius:var(--card-radius);
+    box-shadow:0 6px 18px rgba(15,32,72,0.07);
+    padding:14px;margin-bottom:12px;
+  }
+
+  /* ---------- summary table ---------- */
+  table.summary{width:100%;border-collapse:collapse;font-size:11.5px;}
+  table.summary th{
+    text-align:left;color:var(--muted);font-weight:700;font-size:9.5px;
+    text-transform:uppercase;letter-spacing:.04em;padding:0 4px 8px;
+    border-bottom:1px solid #edf1f8;
+  }
+  table.summary td{padding:8px 4px;vertical-align:middle;border-bottom:1px solid #f3f5fa;}
+  table.summary tr:last-child td{border-bottom:none;}
+  /* Kolom sticky (Rank + Toko) khusus tabel lebar "Detail Performa Semua Toko", agar tetap terlihat saat geser ke kanan di HP */
+  #allStoreTable .sticky-col1, #allStoreTable .sticky-col2{position:sticky;background:#fff;}
+  #allStoreTable thead .sticky-col1, #allStoreTable thead .sticky-col2{background:#fff;z-index:3;}
+  #allStoreTable tbody .sticky-col1, #allStoreTable tbody .sticky-col2{z-index:2;}
+  #allStoreTable .sticky-col1{left:0;width:32px;min-width:32px;}
+  #allStoreTable .sticky-col2{left:32px;width:108px;min-width:108px;max-width:108px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:2px 0 5px rgba(15,32,72,0.08);}
+  .metric-name{font-weight:700;font-size:11.5px;color:var(--ink);}
+  .metric-sub{font-size:9px;color:var(--muted);font-weight:500;}
+  .num{font-variant-numeric:tabular-nums;font-size:11px;}
+  .pill{
+    display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:800;
+    padding:3px 8px;border-radius:999px;white-space:nowrap;
+  }
+  .pill.green{background:var(--green-soft);color:#0d7a3d;}
+  .pill.yellow{background:var(--yellow-soft);color:#9a6408;}
+  .pill.red{background:var(--red-soft);color:#b53232;}
+  .pill.dot{width:6px;height:6px;border-radius:50%;display:inline-block;}
+  .pill.green .dot{background:var(--green);}
+  .pill.yellow .dot{background:var(--yellow);}
+  .pill.red .dot{background:var(--red);}
+
+  /* ---------- ranking cards ---------- */
+  .rank-row{display:flex;gap:10px;align-items:center;padding:9px 4px;border-bottom:1px solid #f3f5fa;}
+  .rank-row:last-child{border-bottom:none;}
+  .rank-badge{
+    width:28px;height:28px;border-radius:9px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;color:#fff;
+  }
+  .rank-info{flex:1;min-width:0;}
+  .rank-name{font-size:12px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .rank-meta{font-size:9.5px;color:var(--muted);}
+  .rank-val{font-size:12px;font-weight:800;color:var(--navy-deep);text-align:right;}
+  .placeholder-note{
+    font-size:10.5px;color:var(--muted);background:#f7f9fc;border:1px dashed #d7deec;
+    border-radius:10px;padding:8px 10px;line-height:1.4;
+  }
+
+  /* ---------- indicator panels ---------- */
+  .panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+  .panel-icon{
+    width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+    background:var(--green-soft);flex-shrink:0;
+  }
+  .panel-title{font-size:13px;font-weight:800;color:var(--ink);}
+  .panel-ach{font-size:15px;font-weight:800;}
+  .bar-track{height:7px;border-radius:5px;background:#eef1f8;overflow:hidden;margin:6px 0 2px;}
+  .bar-fill{height:100%;border-radius:5px;}
+  .sub-row{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);margin-top:6px;padding-top:6px;border-top:1px dashed #eef1f8;}
+  .sub-row .n{color:var(--ink);font-weight:700;}
+  .mini-tb{display:flex;gap:8px;margin-top:10px;}
+  .mini-tb .box{flex:1;background:#f7f9fc;border-radius:10px;padding:7px 8px;}
+  .mini-tb .box .h{font-size:9px;font-weight:800;color:var(--navy-mid);margin-bottom:3px;}
+
+  /* ---------- focus area ---------- */
+  .focus-grid{display:flex;flex-direction:column;gap:10px;}
+  .focus-box{border-radius:14px;padding:12px 13px;}
+  .focus-box.high{background:var(--red-soft);border:1px solid #f4c7c7;}
+  .focus-box.mid{background:var(--yellow-soft);border:1px solid #f3ddad;}
+  .focus-box.good{background:var(--green-soft);border:1px solid #bfe8cf;}
+  .focus-label{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
+  .focus-box.high .focus-label{color:#b53232;}
+  .focus-box.mid .focus-label{color:#9a6408;}
+  .focus-box.good .focus-label{color:#0d7a3d;}
+  .focus-item{font-size:11.5px;color:var(--ink);padding:3px 0;display:flex;justify-content:space-between;}
+  .focus-item span.v{font-weight:800;}
+  .focus-empty{font-size:11px;color:var(--muted);font-style:italic;}
+
+  footer{
+    text-align:center;padding:20px 16px 6px;color:var(--muted);font-size:10.5px;
+    display:flex;flex-direction:column;gap:3px;
+  }
+  footer .brand{font-weight:800;color:var(--navy-deep);font-size:12px;letter-spacing:.02em;}
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <label for="fileInput">⬆ Upload Excel</label>
+  <input id="fileInput" type="file" accept=".xlsx,.xls,.csv">
+  <button class="reset" onclick="resetData()">Reset ke data awal</button>
+  <div class="hint">Kolom: Metrik | Target | Actual — nama metrik harus cocok dengan daftar di dashboard. Data otomatis tersimpan di browser ini setiap kali upload berhasil, walau tab ditutup.</div>
+</div>
+
+<div id="stage">
+
+  <header>
+    <div class="hdr-top">
+      <div class="hdr-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 19V10M11 19V5M18 19V13" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+      </div>
+      <div class="hdr-eyebrow">Sales Performance Report</div>
+    </div>
+    <h1>DASHBOARD PERFORMANCE<br>AREA HASAN BASRI</h1>
+    <div class="hdr-sub">Periode Juni 2026 &nbsp;|&nbsp; Update 28 Juli 2026</div>
+    <div class="hdr-kpis" id="hdrKpis"></div>
+  </header>
+
+  <section>
+    <div class="section-title"><span class="bar"></span>Ringkasan Area</div>
+    <div class="card">
+      <div id="tfBadge" style="font-size:10.5px;color:var(--navy-mid);font-weight:700;background:#eef3fc;border-radius:8px;padding:6px 9px;margin-bottom:10px;"></div>
+      <div class="scroll-x">
+      <table class="summary" style="min-width:560px;">
+        <thead><tr><th>Indikator</th><th>Target</th><th>Actual</th><th>Kekurangan</th><th>Proyeksi (TF)</th><th>Status</th></tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="bar"></span>Top 5 Toko Terbaik</div>
+    <div class="card" id="topStoresCard"></div>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="bar"></span>Top 5 Toko Perlu Perhatian</div>
+    <div class="card" id="bottomStoresCard"></div>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="bar"></span>Dashboard per Sub Indikator</div>
+    <div id="panelsWrap"></div>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="bar"></span>Detail Performa Semua Toko (18)</div>
+    <div class="card">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:8px;line-height:1.4;">Rank Total = jumlah rank dari 9 indikator % (Net Sales, GM, APC, PWP, PSM, Serba Gratis, STD, Cont. Member, Penawaran Langsung). <b>NSB tidak ikut dihitung ke Rank Total</b> — rank terkecil = toko terbaik. Kolom <b>Kekurangan NS</b> (dekat TF) &amp; <b>Estimasi Akhir Bulan</b> = proyeksi Actual NS ÷ TF. Di ujung kanan tabel, setiap 9 indikator (NS, GM, APC, PWP, PSM, Sertis, STD, Member, NSB) ditampilkan <b>Target / Actual / Kekurangan / Rank</b> per toko secara horizontal — Kekurangan dihitung otomatis (Actual − Target): <span style="color:#b53232;font-weight:800;">merah jika minus (di bawah target)</span>, <span style="color:#0d7a3d;font-weight:800;">hijau jika plus (mencapai/melebihi target)</span>. Kolom <b>Rank</b> = peringkat toko pada indikator tersebut saja (#1 = terbaik, ditandai hijau). Semua angka ini otomatis terhitung ulang dan tersimpan setiap kali Excel baru diupload.</div>
+      <div style="position:relative;margin-bottom:10px;">
+        <input id="storeFilterInput" type="text" placeholder="🔍 Cari nama toko..." autocomplete="off"
+          style="width:100%;padding:9px 34px 9px 12px;border:1px solid #d7deec;border-radius:10px;font-size:12.5px;box-sizing:border-box;color:var(--ink);background:#f7f9fc;">
+        <button id="storeFilterClear" type="button" title="Bersihkan pencarian"
+          style="display:none;position:absolute;right:6px;top:50%;transform:translateY(-50%);border:none;background:none;color:#8a95ad;font-size:15px;cursor:pointer;padding:4px 6px;">✕</button>
+      </div>
+      <div id="storeFilterInfo" style="font-size:10px;color:var(--muted);margin-bottom:6px;"></div>
+      <div class="scroll-hint">👉 Geser tabel ke kanan untuk lihat semua kolom (Target/Actual/Kekurangan/Rank tiap indikator)</div>
+      <div class="scroll-x">
+        <table class="summary" id="allStoreTable" style="min-width:3800px;font-size:10.5px;">
+          <thead>
+          <tr id="allStoreHeadRow1"></tr>
+          <tr id="allStoreHeadRow2"></tr>
+          </thead>
+          <tbody id="allStoreBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-title"><span class="bar"></span>Fokus Area</div>
+    <div class="card">
+      <div class="focus-grid" id="focusGrid"></div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="brand">Area Hasan Basri</div>
+    <div>18 Toko &nbsp;•&nbsp; Juni 2026 &nbsp;•&nbsp; Data Otomatis dari Excel</div>
+  </footer>
+</div>
+
+<script>
+/* ================= DATA MODEL ================= */
+// Ganti / upload Excel dengan kolom: Metrik | Target | Actual (nama metrik harus match "key" di bawah, boleh pakai label)
+// TF = Time Factor (hari berjalan / total hari bulan ini), dipakai untuk proyeksi & kekurangan
+let TF_VALUE = 0.870967741935484;
+const STORAGE_KEY = "dashboard_hasan_basri_data_v1";
+
+const DEFAULT_DATA = {
+  net_sales_total:      {label:"Net Sales Total",        target:7206976456, actual:5513652380, unit:"currency"},
+  gm:                   {label:"%GM",                    target:19.16,      actual:19.80,      unit:"percent"},
+  penawaran_langsung:   {label:"Penawaran Langsung",     target:100,        actual:98.29,      unit:"percent"},
+  apc:                  {label:"APC vs Target",          target:39026,      actual:40184,      unit:"currency", weight:25},
+  pwp_total:            {label:"PWP Total",              target:12899,      actual:12247,      unit:"number", weight:25},
+  psm_total:            {label:"PSM Total",              target:43573,      actual:37328,      unit:"number", weight:20},
+  sg_total:             {label:"Serba Gratis Total",     target:5410,       actual:5713,       unit:"number", weight:30},
+  nsb_contribution:     {label:"Kontribusi NSB",         target:10089767,   actual:7375780,    unit:"currency"},
+};
+
+// Panel-panel (7 panel — sub-breakdown per hari/varian tidak tersedia di sumber "ikt area hasan", jadi hanya angka total per indikator)
+const PANEL_DEF = [
+  {title:"Net Sales", main:"net_sales_total", subs:[]},
+  {title:"APC",       main:"apc",             subs:[]},
+  {title:"PWP",       main:"pwp_total",       subs:[]},
+  {title:"PSM",       main:"psm_total",       subs:[]},
+  {title:"Serba Gratis", main:"sg_total",     subs:[]},
+  {title:"Penawaran Langsung", main:"penawaran_langsung", subs:[]},
+  {title:"Kontribusi NSB", main:"nsb_contribution", subs:[]},
+];
+
+// 8 baris ringkasan area (sesuai permintaan terbaru)
+const SUMMARY_KEYS = ["net_sales_total","gm","apc","pwp_total","psm_total","sg_total","penawaran_langsung","nsb_contribution"];
+
+let currentData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+
+/* ================= HELPERS ================= */
+function achievement(m){
+  if(!m.target || m.target===0) return 0;
+  return (m.actual / m.target) * 100;
+}
+function statusOf(pct){
+  if(Math.abs(pct) > 300) return "gray"; // data anomali
+  if(pct >= 100) return "green";
+  if(pct >= 90) return "yellow";
+  return "red";
+}
+function fmtNum(v, unit){
+  if(unit==="percent") return v.toFixed(2).replace(/\.00$/,"") + "%";
+  if(unit==="currency") return "Rp " + Math.round(v).toLocaleString("id-ID");
+  return Math.round(v).toLocaleString("id-ID");
+}
+// Selisih Actual - Target: minus (kurang dari target) = merah, plus (lebih/sama target) = hijau
+function fmtSelisih(actual, target, unit){
+  const diff = (actual||0) - (target||0);
+  const color = diff < 0 ? "#b53232" : "#0d7a3d";
+  const sign = diff > 0 ? "+" : (diff < 0 ? "-" : "");
+  const text = sign + fmtNum(Math.abs(diff), unit);
+  return `<span style="color:${color};font-weight:800;">${text}</span>`;
+}
+function pctLabel(pct){
+  if(Math.abs(pct) > 300) return "Cek data";
+  return pct.toFixed(1) + "%";
+}
+function pillHtml(pct){
+  const s = statusOf(pct);
+  const cls = s==="gray" ? "yellow" : s;
+  return `<span class="pill ${cls}"><span class="dot"></span>${pctLabel(pct)}</span>`;
+}
+function barColor(pct){
+  const s = statusOf(pct);
+  if(s==="green") return "var(--green)";
+  if(s==="yellow") return "var(--yellow)";
+  if(s==="gray") return "#9aa6c2";
+  return "var(--red)";
+}
+
+/* ================= RENDER: HEADER KPI STRIP ================= */
+function renderHeaderKpis(){
+  const wrap = document.getElementById("hdrKpis");
+  const ns = currentData.net_sales_total;
+  const gm = currentData.gm;
+  const nsPct = achievement(ns), gmPct = achievement(gm);
+  wrap.innerHTML = `
+    <div class="hdr-kpi"><div class="v">${pctLabel(nsPct)}</div><div class="l">Net Sales</div></div>
+    <div class="hdr-kpi"><div class="v">${pctLabel(gmPct)}</div><div class="l">Gross Margin</div></div>
+    <div class="hdr-kpi"><div class="v">18</div><div class="l">Toko</div></div>
+  `;
+}
+
+/* ================= RENDER: TF BADGE ================= */
+function renderTfBadge(){
+  const el = document.getElementById("tfBadge");
+  if(el) el.innerHTML = `⏱ TF (Time Factor): <b>${(TF_VALUE*100).toFixed(1)}%</b> hari berjalan bulan ini — Proyeksi = Actual ÷ TF (estimasi akhir bulan jika ritme berjalan sama)`;
+}
+
+/* ================= RENDER: SUMMARY TABLE ================= */
+function renderSummary(){
+  renderTfBadge();
+  const body = document.getElementById("summaryBody");
+  body.innerHTML = SUMMARY_KEYS.map(k=>{
+    const m = currentData[k];
+    const pct = achievement(m);
+    const kekurangan = m.target - m.actual;
+    const proyeksi = TF_VALUE ? (m.actual / TF_VALUE) : m.actual;
+    const proyeksiPct = m.target ? (proyeksi/m.target*100) : 0;
+    return `<tr>
+      <td><div class="metric-name">${m.label}</div>${m.weight? `<div class="metric-sub">Bobot ${m.weight}%</div>`:""}${k==="penawaran_langsung"? `<div class="metric-sub">Index komposit APC+PWP+PSM+Sertis — target selalu 100%</div>`:""}</td>
+      <td class="num">${fmtNum(m.target, m.unit)}</td>
+      <td class="num">${fmtNum(m.actual, m.unit)}</td>
+      <td class="num" style="color:${kekurangan>0?'#b53232':'#0d7a3d'}">${kekurangan>0?fmtNum(kekurangan,m.unit):"Tercapai"}</td>
+      <td class="num">${fmtNum(proyeksi,m.unit)}<br><span style="color:${barColor(proyeksiPct)};font-weight:800;">${pctLabel(proyeksiPct)}</span></td>
+      <td>${pillHtml(pct)}</td>
+    </tr>`;
+  }).join("");
+}
+
+/* ================= REAL PER-TOKO DATA (dari IKT_JUNI_2026-1-1.xlsx, sheet "ikt area hasan") ================= */
+// Catatan: data toko ini periode JUNI 2026 (ranking sudah dihitung sistem asli, kolom RANK AREA).
+// Ringkasan 9 KPI di atas tetap pakai angka Juli 2026 yang diberikan sebelumnya — dua periode berbeda, lihat catatan di chat.
+let STORE_DATA = [{"kode": "Y200", "nama": "KALISAT JBR", "ns_target": 330215936.65, "ns_actual": 282561734.45, "ns_pct": 85.56877578852009, "ns_rank": 1, "gm_target_pct": 21.794672, "gm_actual_pct": 21.108811, "gm_pct": 96.85307950493589, "gm_rank": 18, "apc_target": 33944.0, "apc_actual": 33670.0, "apc_pct": 99.19278812161207, "apc_rank": 14, "pwp_target": 790.0, "pwp_actual": 494.0, "pwp_pct": 62.53164556962025, "pwp_rank": 18, "psm_target": 2697.0, "psm_actual": 2714.0, "psm_pct": 100.63032999629218, "psm_rank": 3, "sertis_target": 283.0, "sertis_actual": 373.0, "sertis_pct": 131.80212014134275, "sertis_rank": 2, "nsb_target": 462302.31, "nsb_actual": 362292.32, "nsb_pct": 78.36697160349469, "nsb_rank": 8, "std_target": 290.0, "std_actual": 311.0, "std_pct": 107.24137931034483, "std_rank": 1, "member_target": 13373.0, "member_actual": 11406.547, "member_pct": 85.2953488372093, "member_rank": 18, "total_point": 1.00097810464469, "rank_area": 7, "penawaran_pct": 100.09781046446935, "ns_pct_rank": 1, "gm_pct_rank": 18, "apc_pct_rank": 14, "pwp_pct_rank": 18, "psm_pct_rank": 3, "sertis_pct_rank": 2, "std_pct_rank": 1, "member_pct_rank": 18, "penawaran_pct_rank": 10, "total_rank_sum": 85}, {"kode": "Y038", "nama": "LETJEND SUPRAPTO 2", "ns_target": 286283337.27, "ns_actual": 232235561.6, "ns_pct": 81.12087969023976, "ns_rank": 2, "gm_target_pct": 20.42, "gm_actual_pct": 21.302074, "gm_pct": 104.31965719882467, "gm_rank": 10, "apc_target": 35145.0, "apc_actual": 35017.0, "apc_pct": 99.63579456537202, "apc_rank": 12, "pwp_target": 612.0, "pwp_actual": 512.0, "pwp_pct": 83.66013071895425, "pwp_rank": 11, "psm_target": 2079.0, "psm_actual": 1900.0, "psm_pct": 91.39009139009138, "psm_rank": 9, "sertis_target": 332.0, "sertis_actual": 346.0, "sertis_pct": 104.21686746987953, "sertis_rank": 9, "nsb_target": 400796.67, "nsb_actual": 515201.28, "nsb_pct": 128.54430152825373, "nsb_rank": 2, "std_target": 281.0, "std_actual": 246.0, "std_pct": 87.54448398576513, "std_rank": 9, "member_target": 11070.0, "member_actual": 10259.676, "member_pct": 92.67999999999999, "member_rank": 16, "total_point": 0.953670598400637, "rank_area": 11, "penawaran_pct": 95.3670598400637, "ns_pct_rank": 2, "gm_pct_rank": 10, "apc_pct_rank": 12, "pwp_pct_rank": 11, "psm_pct_rank": 9, "sertis_pct_rank": 9, "std_pct_rank": 9, "member_pct_rank": 16, "penawaran_pct_rank": 13, "total_rank_sum": 91}, {"kode": "Y073", "nama": "SUPRIYADI JBR", "ns_target": 749950348.65, "ns_actual": 596618521.07, "ns_pct": 79.55440278732912, "ns_rank": 3, "gm_target_pct": 18.69, "gm_actual_pct": 18.954051, "gm_pct": 101.41279293739967, "gm_rank": 14, "apc_target": 43859.0, "apc_actual": 46622.0, "apc_pct": 106.29973323605188, "apc_rank": 5, "pwp_target": 1116.0, "pwp_actual": 926.5, "pwp_pct": 83.01971326164875, "pwp_rank": 12, "psm_target": 3245.0, "psm_actual": 2903.0, "psm_pct": 89.46070878274269, "psm_rank": 10, "sertis_target": 416.0, "sertis_actual": 535.0, "sertis_pct": 128.60576923076923, "sertis_rank": 3, "nsb_target": 1049930.49, "nsb_actual": 934474.97, "nsb_pct": 89.00350822272053, "nsb_rank": 4, "std_target": 536.0, "std_actual": 474.0, "std_pct": 88.43283582089553, "std_rank": 7, "member_target": 21804.0, "member_actual": 26805.648, "member_pct": 122.93913043478261, "member_rank": 6, "total_point": 1.03803734150204, "rank_area": 3, "penawaran_pct": 103.80373415020446, "ns_pct_rank": 3, "gm_pct_rank": 14, "apc_pct_rank": 5, "pwp_pct_rank": 12, "psm_pct_rank": 10, "sertis_pct_rank": 3, "std_pct_rank": 7, "member_pct_rank": 6, "penawaran_pct_rank": 2, "total_rank_sum": 62}, {"kode": "Y144", "nama": "A.YANI JBR", "ns_target": 365882000.47, "ns_actual": 290288439.47, "ns_pct": 79.33936053074625, "ns_rank": 4, "gm_target_pct": 20.921, "gm_actual_pct": 20.759439, "gm_pct": 99.22775679938817, "gm_rank": 16, "apc_target": 30928.0, "apc_actual": 33849.0, "apc_pct": 109.4445162959131, "apc_rank": 4, "pwp_target": 545.0, "pwp_actual": 449.0, "pwp_pct": 82.38532110091742, "pwp_rank": 13, "psm_target": 3004.0, "psm_actual": 2146.0, "psm_pct": 71.43808255659121, "psm_rank": 15, "sertis_target": 319.0, "sertis_actual": 318.0, "sertis_pct": 99.68652037617555, "sertis_rank": 12, "nsb_target": 512234.8, "nsb_actual": 655844.24, "nsb_pct": 128.03586167905812, "nsb_rank": 3, "std_target": 388.0, "std_actual": 318.0, "std_pct": 81.95876288659794, "std_rank": 13, "member_target": 11130.0, "member_actual": 11794.938, "member_pct": 105.97428571428571, "member_rank": 12, "total_point": 0.921510319733785, "rank_area": 16, "penawaran_pct": 92.15103197337854, "ns_pct_rank": 4, "gm_pct_rank": 16, "apc_pct_rank": 4, "pwp_pct_rank": 13, "psm_pct_rank": 15, "sertis_pct_rank": 12, "std_pct_rank": 13, "member_pct_rank": 12, "penawaran_pct_rank": 15, "total_rank_sum": 104}, {"kode": "Y141", "nama": "SUKOWONO 3 JBR", "ns_target": 333711715.08, "ns_actual": 258204453.42, "ns_pct": 77.3735058591219, "ns_rank": 6, "gm_target_pct": 18.91, "gm_actual_pct": 20.11484, "gm_pct": 106.37144368059228, "gm_rank": 3, "apc_target": 42682.0, "apc_actual": 41673.0, "apc_pct": 97.63600581041189, "apc_rank": 17, "pwp_target": 608.0, "pwp_actual": 736.5, "pwp_pct": 121.13486842105263, "pwp_rank": 2, "psm_target": 3014.0, "psm_actual": 2358.0, "psm_pct": 78.23490378234904, "psm_rank": 13, "sertis_target": 291.0, "sertis_actual": 166.0, "sertis_pct": 57.0446735395189, "sertis_rank": 18, "nsb_target": 467196.4, "nsb_actual": 297534.06, "nsb_pct": 63.68500699063605, "nsb_rank": 11, "std_target": 291.0, "std_actual": 230.0, "std_pct": 79.03780068728523, "std_rank": 17, "member_target": 10350.0, "member_actual": 11726.32, "member_pct": 113.29777777777777, "member_rank": 10, "total_point": 0.874531013761916, "rank_area": 15, "penawaran_pct": 87.45310137619161, "ns_pct_rank": 6, "gm_pct_rank": 3, "apc_pct_rank": 17, "pwp_pct_rank": 2, "psm_pct_rank": 13, "sertis_pct_rank": 18, "std_pct_rank": 17, "member_pct_rank": 10, "penawaran_pct_rank": 17, "total_rank_sum": 103}, {"kode": "Y116", "nama": "CUMEDAK JEMBER", "ns_target": 535465614.75, "ns_actual": 415888751.61, "ns_pct": 77.66861963754135, "ns_rank": 5, "gm_target_pct": 18.031, "gm_actual_pct": 18.89524, "gm_pct": 104.79307858687817, "gm_rank": 8, "apc_target": 45767.0, "apc_actual": 51161.0, "apc_pct": 111.78578451722858, "apc_rank": 1, "pwp_target": 1115.0, "pwp_actual": 1412.0, "pwp_pct": 126.63677130044843, "pwp_rank": 1, "psm_target": 2523.0, "psm_actual": 2487.0, "psm_pct": 98.5731272294887, "psm_rank": 5, "sertis_target": 325.0, "sertis_actual": 331.0, "sertis_pct": 101.84615384615385, "sertis_rank": 10, "nsb_target": 749651.86, "nsb_actual": 292828.49, "nsb_pct": 39.061930694069105, "nsb_rank": 18, "std_target": 372.0, "std_actual": 302.0, "std_pct": 81.18279569892472, "std_rank": 15, "member_target": 13590.0, "member_actual": 19407.426, "member_pct": 142.80666666666667, "member_rank": 1, "total_point": 1.09874110554163, "rank_area": 1, "penawaran_pct": 109.87411055416314, "ns_pct_rank": 5, "gm_pct_rank": 8, "apc_pct_rank": 1, "pwp_pct_rank": 1, "psm_pct_rank": 5, "sertis_pct_rank": 10, "std_pct_rank": 15, "member_pct_rank": 1, "penawaran_pct_rank": 1, "total_rank_sum": 47}, {"kode": "Y469", "nama": "TAMANAN", "ns_target": 334662100.31, "ns_actual": 253642935.61, "ns_pct": 75.790755922182, "ns_rank": 9, "gm_target_pct": 18.731, "gm_actual_pct": 19.686355, "gm_pct": 105.10039506700122, "gm_rank": 7, "apc_target": 38078.0, "apc_actual": 36527.0, "apc_pct": 95.92678186879563, "apc_rank": 18, "pwp_target": 667.0, "pwp_actual": 674.0, "pwp_pct": 101.04947526236883, "pwp_rank": 7, "psm_target": 1953.0, "psm_actual": 1866.0, "psm_pct": 95.54531490015361, "psm_rank": 8, "sertis_target": 333.0, "sertis_actual": 306.0, "sertis_pct": 91.8918918918919, "sertis_rank": 14, "nsb_target": 468526.94, "nsb_actual": 300449.41, "nsb_pct": 64.12638940249626, "nsb_rank": 10, "std_target": 274.0, "std_actual": 258.0, "std_pct": 94.16058394160584, "std_rank": 3, "member_target": 11610.0, "member_actual": 11803.758, "member_pct": 101.6688888888889, "member_rank": 13, "total_point": 0.959206948303894, "rank_area": 12, "penawaran_pct": 95.92069483038941, "ns_pct_rank": 9, "gm_pct_rank": 7, "apc_pct_rank": 18, "pwp_pct_rank": 7, "psm_pct_rank": 8, "sertis_pct_rank": 14, "std_pct_rank": 3, "member_pct_rank": 13, "penawaran_pct_rank": 12, "total_rank_sum": 91}, {"kode": "Y196", "nama": "GRUJUGAN BONDOWOSO", "ns_target": 220852233.34, "ns_actual": 169682229.12, "ns_pct": 76.83066028079317, "ns_rank": 7, "gm_target_pct": 18.411, "gm_actual_pct": 19.71885, "gm_pct": 107.10363369724621, "gm_rank": 2, "apc_target": 34322.0, "apc_actual": 34693.0, "apc_pct": 101.08093933919935, "apc_rank": 10, "pwp_target": 520.0, "pwp_actual": 492.0, "pwp_pct": 94.61538461538461, "pwp_rank": 9, "psm_target": 1484.0, "psm_actual": 1448.0, "psm_pct": 97.57412398921834, "psm_rank": 6, "sertis_target": 225.0, "sertis_actual": 263.0, "sertis_pct": 116.88888888888889, "sertis_rank": 5, "nsb_target": 309193.13, "nsb_actual": 483999.02, "nsb_pct": 156.53614942867586, "nsb_rank": 1, "std_target": 196.0, "std_actual": 182.0, "std_pct": 92.85714285714286, "std_rank": 5, "member_target": 8190.0, "member_actual": 10471.188, "member_pct": 127.85333333333332, "member_rank": 4, "total_point": 1.03505572453156, "rank_area": 2, "penawaran_pct": 103.50557245315632, "ns_pct_rank": 7, "gm_pct_rank": 2, "apc_pct_rank": 10, "pwp_pct_rank": 9, "psm_pct_rank": 6, "sertis_pct_rank": 5, "std_pct_rank": 5, "member_pct_rank": 4, "penawaran_pct_rank": 4, "total_rank_sum": 52}, {"kode": "Y136", "nama": "ARJASA JBR", "ns_target": 217931266.82, "ns_actual": 166174306.69, "ns_pct": 76.25078728480545, "ns_rank": 8, "gm_target_pct": 18.361, "gm_actual_pct": 19.87818, "gm_pct": 108.2630575676706, "gm_rank": 1, "apc_target": 37277.0, "apc_actual": 36813.0, "apc_pct": 98.75526464039488, "apc_rank": 15, "pwp_target": 289.0, "pwp_actual": 323.5, "pwp_pct": 111.93771626297577, "pwp_rank": 4, "psm_target": 1411.0, "psm_actual": 1354.0, "psm_pct": 95.9603118355776, "psm_rank": 7, "sertis_target": 227.0, "sertis_actual": 169.0, "sertis_pct": 74.44933920704845, "sertis_rank": 17, "nsb_target": 305103.77, "nsb_actual": 246821.16, "nsb_pct": 80.89744679326644, "nsb_rank": 7, "std_target": 205.0, "std_actual": 168.0, "std_pct": 81.95121951219512, "std_rank": 14, "member_target": 5880.0, "member_actual": 6903.792, "member_pct": 117.41142857142859, "member_rank": 8, "total_point": 0.942001093550727, "rank_area": 10, "penawaran_pct": 94.20010935507273, "ns_pct_rank": 8, "gm_pct_rank": 1, "apc_pct_rank": 15, "pwp_pct_rank": 4, "psm_pct_rank": 7, "sertis_pct_rank": 17, "std_pct_rank": 14, "member_pct_rank": 8, "penawaran_pct_rank": 14, "total_rank_sum": 88}, {"kode": "Y247", "nama": "SUMBER JAMBE JBR", "ns_target": 350421396.45, "ns_actual": 263337033.86, "ns_pct": 75.14867428980591, "ns_rank": 11, "gm_target_pct": 18.151, "gm_actual_pct": 19.077313, "gm_pct": 105.10337171505701, "gm_rank": 6, "apc_target": 41614.0, "apc_actual": 42611.0, "apc_pct": 102.39582832700533, "apc_rank": 9, "pwp_target": 812.0, "pwp_actual": 852.5, "pwp_pct": 104.98768472906403, "pwp_rank": 6, "psm_target": 2008.0, "psm_actual": 1484.0, "psm_pct": 73.90438247011953, "psm_rank": 14, "sertis_target": 317.0, "sertis_actual": 364.0, "sertis_pct": 114.82649842271293, "sertis_rank": 6, "nsb_target": 490589.96, "nsb_actual": 271013.95, "nsb_pct": 55.24245746896247, "nsb_rank": 12, "std_target": 274.0, "std_actual": 229.0, "std_pct": 83.57664233576642, "std_rank": 11, "member_target": 9847.0, "member_actual": 11075.585, "member_pct": 112.47674418604649, "member_rank": 11, "total_point": 1.01074704284855, "rank_area": 6, "penawaran_pct": 101.07470428485513, "ns_pct_rank": 11, "gm_pct_rank": 6, "apc_pct_rank": 9, "pwp_pct_rank": 6, "psm_pct_rank": 14, "sertis_pct_rank": 6, "std_pct_rank": 11, "member_pct_rank": 11, "penawaran_pct_rank": 6, "total_rank_sum": 80}, {"kode": "Y142", "nama": "PANCORAN BONDOWOSO", "ns_target": 174321793.91, "ns_actual": 129169564.88, "ns_pct": 74.0983453547343, "ns_rank": 15, "gm_target_pct": 19.551, "gm_actual_pct": 19.969844, "gm_pct": 102.14231497110123, "gm_rank": 13, "apc_target": 33156.0, "apc_actual": 34064.0, "apc_pct": 102.7385691880806, "apc_rank": 8, "pwp_target": 271.0, "pwp_actual": 207.0, "pwp_pct": 76.38376383763837, "pwp_rank": 15, "psm_target": 1504.0, "psm_actual": 1011.0, "psm_pct": 67.22074468085107, "psm_rank": 16, "sertis_target": 200.0, "sertis_actual": 153.0, "sertis_pct": 76.5, "sertis_rank": 16, "nsb_target": 244050.51, "nsb_actual": 209770.12, "nsb_pct": 85.95356756271478, "nsb_rank": 5, "std_target": 172.0, "std_actual": 141.0, "std_pct": 81.97674418604652, "std_rank": 12, "member_target": 6486.0, "member_actual": 7648.545, "member_pct": 117.92391304347827, "member_rank": 7, "total_point": 0.811747321926, "rank_area": 18, "penawaran_pct": 81.17473219259996, "ns_pct_rank": 15, "gm_pct_rank": 13, "apc_pct_rank": 8, "pwp_pct_rank": 15, "psm_pct_rank": 16, "sertis_pct_rank": 16, "std_pct_rank": 12, "member_pct_rank": 7, "penawaran_pct_rank": 18, "total_rank_sum": 120}, {"kode": "Y214", "nama": "DR.WAHIDIN KALISAT", "ns_target": 858238524.59, "ns_actual": 647951357.57, "ns_pct": 75.49781779832607, "ns_rank": 10, "gm_target_pct": 18.11, "gm_actual_pct": 18.732311, "gm_pct": 103.43628382109331, "gm_rank": 11, "apc_target": 46730.0, "apc_actual": 48598.0, "apc_pct": 103.99743205649476, "apc_rank": 7, "pwp_target": 1184.0, "pwp_actual": 1337.0, "pwp_pct": 112.9222972972973, "pwp_rank": 3, "psm_target": 3800.0, "psm_actual": 2318.0, "psm_pct": 61.0, "psm_rank": 18, "sertis_target": 393.0, "sertis_actual": 487.0, "sertis_pct": 123.91857506361323, "sertis_rank": 4, "nsb_target": 1201533.93, "nsb_actual": 1030145.6, "nsb_pct": 85.73587264406258, "nsb_rank": 6, "std_target": 560.0, "std_actual": 494.0, "std_pct": 88.21428571428571, "std_rank": 8, "member_target": 22230.0, "member_actual": 27365.624, "member_pct": 123.10222222222222, "member_rank": 5, "total_point": 1.03605504857532, "rank_area": 4, "penawaran_pct": 103.60550485753198, "ns_pct_rank": 10, "gm_pct_rank": 11, "apc_pct_rank": 7, "pwp_pct_rank": 3, "psm_pct_rank": 18, "sertis_pct_rank": 4, "std_pct_rank": 8, "member_pct_rank": 5, "penawaran_pct_rank": 3, "total_rank_sum": 69}, {"kode": "Y222", "nama": "SUMBER JERUK JBR", "ns_target": 363918665.85, "ns_actual": 270153992.75, "ns_pct": 74.23471728744798, "ns_rank": 14, "gm_target_pct": 18.59, "gm_actual_pct": 19.439704, "gm_pct": 104.57075847229693, "gm_rank": 9, "apc_target": 43060.0, "apc_actual": 42719.0, "apc_pct": 99.20808174640037, "apc_rank": 13, "pwp_target": 761.0, "pwp_actual": 749.0, "pwp_pct": 98.42312746386334, "pwp_rank": 8, "psm_target": 2456.0, "psm_actual": 2549.0, "psm_pct": 103.78664495114008, "psm_rank": 2, "sertis_target": 303.0, "sertis_actual": 304.0, "sertis_pct": 100.33003300330033, "sertis_rank": 11, "nsb_target": 509486.13, "nsb_actual": 231533.13, "nsb_pct": 45.44444222652342, "nsb_rank": 16, "std_target": 263.0, "std_actual": 235.0, "std_pct": 89.35361216730038, "std_rank": 6, "member_target": 10105.0, "member_actual": 13113.705, "member_pct": 129.77441860465115, "member_rank": 3, "total_point": 1.00264141193784, "rank_area": 5, "penawaran_pct": 100.26414119378404, "ns_pct_rank": 14, "gm_pct_rank": 9, "apc_pct_rank": 13, "pwp_pct_rank": 8, "psm_pct_rank": 2, "sertis_pct_rank": 11, "std_pct_rank": 6, "member_pct_rank": 3, "penawaran_pct_rank": 8, "total_rank_sum": 74}, {"kode": "Y457", "nama": "DADAPAN BONDOWOSO", "ns_target": 228499165.42, "ns_actual": 171200550.91, "ns_pct": 74.92392831952777, "ns_rank": 12, "gm_target_pct": 19.681, "gm_actual_pct": 20.738619, "gm_pct": 105.37380722524262, "gm_rank": 4, "apc_target": 42575.0, "apc_actual": 42672.0, "apc_pct": 100.22783323546682, "apc_rank": 11, "pwp_target": 606.0, "pwp_actual": 488.5, "pwp_pct": 80.61056105610561, "pwp_rank": 14, "psm_target": 1616.0, "psm_actual": 1920.0, "psm_pct": 118.8118811881188, "psm_rank": 1, "sertis_target": 222.0, "sertis_actual": 213.0, "sertis_pct": 95.94594594594594, "sertis_rank": 13, "nsb_target": 319898.83, "nsb_actual": 134118.8, "nsb_pct": 41.92537997091142, "nsb_rank": 17, "std_target": 152.0, "std_actual": 149.0, "std_pct": 98.02631578947368, "std_rank": 2, "member_target": 6854.0, "member_actual": 6239.226, "member_pct": 91.0304347826087, "member_rank": 17, "total_point": 0.977557585943007, "rank_area": 8, "penawaran_pct": 97.75575859430064, "ns_pct_rank": 12, "gm_pct_rank": 4, "apc_pct_rank": 11, "pwp_pct_rank": 14, "psm_pct_rank": 1, "sertis_pct_rank": 13, "std_pct_rank": 2, "member_pct_rank": 17, "penawaran_pct_rank": 11, "total_rank_sum": 85}, {"kode": "Y140", "nama": "SUKOWONO 2 JBR", "ns_target": 399598553.46, "ns_actual": 294113312.61, "ns_pct": 73.60219652032372, "ns_rank": 16, "gm_target_pct": 19.29, "gm_actual_pct": 19.722539, "gm_pct": 102.24229652669779, "gm_rank": 12, "apc_target": 40944.0, "apc_actual": 43341.0, "apc_pct": 105.85433763188745, "apc_rank": 6, "pwp_target": 909.0, "pwp_actual": 809.0, "pwp_pct": 88.998899889989, "pwp_rank": 10, "psm_target": 2445.0, "psm_actual": 2148.0, "psm_pct": 87.85276073619632, "psm_rank": 11, "sertis_target": 307.0, "sertis_actual": 249.0, "sertis_pct": 81.10749185667753, "sertis_rank": 15, "nsb_target": 559437.97, "nsb_actual": 387097.64, "nsb_pct": 69.19402342318666, "nsb_rank": 9, "std_target": 296.0, "std_actual": 252.0, "std_pct": 85.13513513513513, "std_rank": 10, "member_target": 11340.0, "member_actual": 13179.096, "member_pct": 116.21777777777777, "member_rank": 9, "total_point": 0.906161090847116, "rank_area": 17, "penawaran_pct": 90.61610908471164, "ns_pct_rank": 16, "gm_pct_rank": 12, "apc_pct_rank": 6, "pwp_pct_rank": 10, "psm_pct_rank": 11, "sertis_pct_rank": 15, "std_pct_rank": 10, "member_pct_rank": 9, "penawaran_pct_rank": 16, "total_rank_sum": 105}, {"kode": "Y015", "nama": "MAESAN BONDOWOSO", "ns_target": 573388013.11, "ns_actual": 427844210.15, "ns_pct": 74.61687380407818, "ns_rank": 13, "gm_target_pct": 18.761, "gm_actual_pct": 18.953069, "gm_pct": 101.023767389798, "gm_rank": 15, "apc_target": 39574.0, "apc_actual": 43823.0, "apc_pct": 110.73684742507707, "apc_rank": 2, "pwp_target": 731.0, "pwp_actual": 487.0, "pwp_pct": 66.62106703146374, "pwp_rank": 17, "psm_target": 3291.0, "psm_actual": 2140.0, "psm_pct": 65.02582801580067, "psm_rank": 17, "sertis_target": 342.0, "sertis_actual": 495.0, "sertis_pct": 144.73684210526315, "sertis_rank": 1, "nsb_target": 802743.22, "nsb_actual": 374919.07, "nsb_pct": 46.70473205616113, "nsb_rank": 15, "std_target": 454.0, "std_actual": 362.0, "std_pct": 79.73568281938326, "std_rank": 16, "member_target": 16652.0, "member_actual": 15884.56, "member_pct": 95.3913043478261, "member_rank": 14, "total_point": 1.00765696848874, "rank_area": 14, "penawaran_pct": 100.76569684887428, "ns_pct_rank": 13, "gm_pct_rank": 15, "apc_pct_rank": 2, "pwp_pct_rank": 17, "psm_pct_rank": 17, "sertis_pct_rank": 1, "std_pct_rank": 16, "member_pct_rank": 14, "penawaran_pct_rank": 7, "total_rank_sum": 102}, {"kode": "Y207", "nama": "BARATAN JBR", "ns_target": 654511176.54, "ns_actual": 478129930.05, "ns_pct": 73.05145384645382, "ns_rank": 17, "gm_target_pct": 19.22, "gm_actual_pct": 20.218487, "gm_pct": 105.19504162330907, "gm_rank": 5, "apc_target": 39658.0, "apc_actual": 39082.0, "apc_pct": 98.54758182460033, "apc_rank": 16, "pwp_target": 814.0, "pwp_actual": 889.0, "pwp_pct": 109.21375921375922, "pwp_rank": 5, "psm_target": 3224.0, "psm_actual": 2781.0, "psm_pct": 86.25930521091811, "psm_rank": 12, "sertis_target": 347.0, "sertis_actual": 380.0, "sertis_pct": 109.5100864553314, "sertis_rank": 8, "nsb_target": 916315.65, "nsb_actual": 487303.34, "nsb_pct": 53.180728715044864, "nsb_rank": 13, "std_target": 487.0, "std_actual": 454.0, "std_pct": 93.22381930184805, "std_rank": 4, "member_target": 19522.0, "member_actual": 18161.362, "member_pct": 93.03023255813953, "member_rank": 15, "total_point": 1.02045222238373, "rank_area": 9, "penawaran_pct": 102.04522223837293, "ns_pct_rank": 17, "gm_pct_rank": 5, "apc_pct_rank": 16, "pwp_pct_rank": 5, "psm_pct_rank": 12, "sertis_pct_rank": 8, "std_pct_rank": 4, "member_pct_rank": 15, "penawaran_pct_rank": 5, "total_rank_sum": 87}, {"kode": "Y549", "nama": "GRUJUGAN LOR", "ns_target": 229124613.69, "ns_actual": 166455494.36, "ns_pct": 72.64845608652514, "ns_rank": 18, "gm_target_pct": 19.338689, "gm_actual_pct": 19.064185, "gm_pct": 98.58054493766356, "gm_rank": 17, "apc_target": 33156.0, "apc_actual": 36368.0, "apc_pct": 109.687537700567, "apc_rank": 3, "pwp_target": 549.0, "pwp_actual": 408.0, "pwp_pct": 74.31693989071039, "pwp_rank": 16, "psm_target": 1819.0, "psm_actual": 1801.0, "psm_pct": 99.01044529961517, "psm_rank": 4, "sertis_target": 228.0, "sertis_actual": 261.0, "sertis_pct": 114.4736842105263, "sertis_rank": 7, "nsb_target": 320774.46, "nsb_actual": 160433.54, "nsb_pct": 50.01443693491059, "nsb_rank": 14, "std_target": 243.0, "std_actual": 170.0, "std_pct": 69.95884773662551, "std_rank": 18, "member_target": 6630.0, "member_actual": 8761.63, "member_pct": 132.15128205128204, "member_rank": 2, "total_point": 1.001453137209, "rank_area": 13, "penawaran_pct": 100.14531372090028, "ns_pct_rank": 18, "gm_pct_rank": 17, "apc_pct_rank": 3, "pwp_pct_rank": 16, "psm_pct_rank": 4, "sertis_pct_rank": 7, "std_pct_rank": 18, "member_pct_rank": 2, "penawaran_pct_rank": 9, "total_rank_sum": 94}];
+const DEFAULT_STORE_DATA = JSON.parse(JSON.stringify(STORE_DATA));
+let STORE_FILTER_TEXT = "";
+const DEFAULT_TF = TF_VALUE;
+
+function storeRows(list, kind){
+  const colors = kind==="top" ? ["#D8A93A","#B9C0CC","#B08256","#12A454","#1C4080"] : ["#E14B4B","#E14B4B","#E14B4B","#E14B4B","#E14B4B"];
+  return list.map((s,i)=>`
+    <div class="rank-row">
+      <div class="rank-badge" style="background:${colors[i]}">${i+1}</div>
+      <div class="rank-info">
+        <div class="rank-name">${s.nama}</div>
+        <div class="rank-meta">${s.kode}</div>
+      </div>
+      <div class="rank-val">${s.valLabel}</div>
+    </div>
+  `).join("");
+}
+
+function renderStorePanels(){
+  if(!STORE_DATA.length){
+    document.getElementById("topStoresCard").innerHTML = `<div class="placeholder-note">Belum ada data per toko.</div>`;
+    document.getElementById("bottomStoresCard").innerHTML = `<div class="placeholder-note">Belum ada data per toko.</div>`;
+    return;
+  }
+  const sorted = [...STORE_DATA].sort((a,b)=>a.rank_area-b.rank_area);
+  const top5 = sorted.slice(0,5).map(s=>({...s, valLabel: pctLabel(s.ns_pct)}));
+  const bottom5 = sorted.slice(-5).reverse().map(s=>({...s, valLabel: pctLabel(s.ns_pct)}));
+  document.getElementById("topStoresCard").innerHTML =
+    storeRows(top5,"top") +
+    `<div class="placeholder-note">Ranking berdasarkan RANK AREA (skor gabungan semua indikator) — Juni 2026.</div>`;
+  document.getElementById("bottomStoresCard").innerHTML =
+    storeRows(bottom5,"bottom") +
+    `<div class="placeholder-note">5 toko dengan RANK AREA terendah — perlu perhatian lebih.</div>`;
+}
+
+/* ================= RENDER: 8 PANELS ================= */
+// Field toko yang sesuai tiap panel (pct = pencapaian %, tidak semua panel punya data toko — Penawaran Langsung belum ada di sumber "ikt area hasan")
+const PANEL_STORE_FIELD = {
+  "Net Sales": "ns_pct",
+  "APC": "apc_pct",
+  "PWP": "pwp_pct",
+  "PSM": "psm_pct",
+  "Serba Gratis": "sertis_pct",
+  "Penawaran Langsung": "penawaran_pct",
+  "Kontribusi NSB": "nsb_pct",
+};
+
+function miniStoreList(field, dir){
+  if(!STORE_DATA.length) return `<div class="placeholder-note" style="padding:5px 6px;">Perlu data per toko</div>`;
+  const sorted = [...STORE_DATA].sort((a,b)=> dir==="top" ? b[field]-a[field] : a[field]-b[field]);
+  return sorted.slice(0,5).map(s=>`<div style="display:flex;justify-content:space-between;font-size:9.5px;padding:2px 0;"><span>${s.nama}</span><span style="font-weight:700;color:${barColor(s[field])}">${pctLabel(s[field])}</span></div>`).join("");
+}
+
+function renderPanels(){
+  const wrap = document.getElementById("panelsWrap");
+  wrap.innerHTML = PANEL_DEF.map(p=>{
+    const main = currentData[p.main];
+    const pct = achievement(main);
+    const color = barColor(pct);
+    const subsHtml = p.subs.map(sk=>{
+      const s = currentData[sk];
+      const spct = achievement(s);
+      return `<div class="sub-row"><span>${s.label}</span><span class="n">${fmtNum(s.actual,s.unit)} <span style="color:${barColor(spct)}">(${pctLabel(spct)})</span></span></div>`;
+    }).join("");
+    const field = PANEL_STORE_FIELD[p.title];
+    const topBox = field ? miniStoreList(field,"top") : `<div class="placeholder-note" style="padding:5px 6px;">Data toko belum ada untuk indikator ini</div>`;
+    const botBox = field ? miniStoreList(field,"bottom") : `<div class="placeholder-note" style="padding:5px 6px;">Data toko belum ada untuk indikator ini</div>`;
+    return `<div class="card">
+      <div class="panel-head">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <div class="panel-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#12A454" stroke-width="2"/><path d="M12 7v5l3 3" stroke="#12A454" stroke-width="2" stroke-linecap="round"/></svg>
+          </div>
+          <div class="panel-title">${p.title}</div>
+        </div>
+        <div class="panel-ach" style="color:${color}">${pctLabel(pct)}</div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.min(Math.max(pct,0),100)}%;background:${color}"></div></div>
+      <div style="font-size:10px;color:var(--muted);">Target ${fmtNum(main.target,main.unit)} &nbsp;•&nbsp; Actual ${fmtNum(main.actual,main.unit)}</div>
+      ${subsHtml}
+      <div class="mini-tb">
+        <div class="box"><div class="h">TOP 5 TOKO (Juni 2026)</div>${topBox}</div>
+        <div class="box"><div class="h">BOTTOM 5 TOKO (Juni 2026)</div>${botBox}</div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+/* ================= RENDER: FOCUS AREA ================= */
+function renderFocus(){
+  const buckets = {high:[], mid:[], good:[]};
+  SUMMARY_KEYS.forEach(k=>{
+    const m = currentData[k];
+    const pct = achievement(m);
+    const s = statusOf(pct);
+    if(s==="red" || s==="gray") buckets.high.push({label:m.label, pct});
+    else if(s==="yellow") buckets.mid.push({label:m.label, pct});
+    else buckets.good.push({label:m.label, pct});
+  });
+  function box(cls, title, arr){
+    const items = arr.length ? arr.map(a=>`<div class="focus-item"><span>${a.label}</span><span class="v">${pctLabel(a.pct)}</span></div>`).join("")
+                              : `<div class="focus-empty">Tidak ada indikator di kategori ini</div>`;
+    return `<div class="focus-box ${cls}"><div class="focus-label">${title}</div>${items}</div>`;
+  }
+  document.getElementById("focusGrid").innerHTML =
+    box("high","Prioritas Tinggi (< 90%)", buckets.high) +
+    box("mid","Prioritas Menengah (90–99%)", buckets.mid) +
+    box("good","Kinerja Baik (≥ 100%)", buckets.good);
+}
+
+/* ================= RENDER: DETAIL SEMUA TOKO ================= */
+// 9 indikator yang punya pasangan Target & Actual per toko — ditampilkan horizontal di ujung kanan tabel
+const STORE_KPI_SPECS = [
+  {label:"NS",     t:"ns_target",      a:"ns_actual",      unit:"currency", rankField:"ns_pct_rank"},
+  {label:"GM",     t:"gm_target_pct",  a:"gm_actual_pct",  unit:"percent",  rankField:"gm_pct_rank"},
+  {label:"APC",    t:"apc_target",     a:"apc_actual",     unit:"currency", rankField:"apc_pct_rank"},
+  {label:"PWP",    t:"pwp_target",     a:"pwp_actual",     unit:"number",   rankField:"pwp_pct_rank"},
+  {label:"PSM",    t:"psm_target",     a:"psm_actual",     unit:"number",   rankField:"psm_pct_rank"},
+  {label:"Sertis", t:"sertis_target",  a:"sertis_actual",  unit:"number",   rankField:"sertis_pct_rank"},
+  {label:"STD",    t:"std_target",     a:"std_actual",     unit:"number",   rankField:"std_pct_rank"},
+  {label:"Member", t:"member_target",  a:"member_actual",  unit:"number",   rankField:"member_pct_rank"},
+  {label:"NSB",    t:"nsb_target",     a:"nsb_actual",     unit:"currency", rankField:"nsb_pct_rank"},
+];
+
+function renderAllStoreHeader(){
+  const row1 = document.getElementById("allStoreHeadRow1");
+  const row2 = document.getElementById("allStoreHeadRow2");
+  if(!row1 || !row2) return;
+  row1.innerHTML =
+    `<th rowspan="2" class="sticky-col1">Rank</th><th rowspan="2" class="sticky-col2">Toko</th><th rowspan="2">TF</th>
+     <th rowspan="2">Kekurangan NS</th><th rowspan="2">Estimasi Akhir Bulan</th>
+     <th rowspan="2">NS%</th><th rowspan="2">GM%</th><th rowspan="2">APC%</th><th rowspan="2">PWP%</th>
+     <th rowspan="2">PSM%</th><th rowspan="2">Sertis%</th><th rowspan="2">STD%</th><th rowspan="2">Member%</th>
+     <th rowspan="2">Penawaran%</th><th rowspan="2">NSB% (info)</th><th rowspan="2">Rank Total</th>` +
+    STORE_KPI_SPECS.map(sp=>`<th colspan="4" style="text-align:center;border-left:2px solid #dde3ee;">${sp.label} (Target / Actual / Kekurangan / Rank)</th>`).join("");
+  row2.innerHTML = STORE_KPI_SPECS.map(sp=>`<th style="border-left:2px solid #dde3ee;">Target</th><th>Actual</th><th>Kekurangan</th><th>Rank</th>`).join("");
+}
+
+// Hitung ulang rank per indikator (termasuk NSB) secara otomatis dari data toko yang aktif saat ini
+function computeStoreRanks(stores){
+  if(!stores || !stores.length) return;
+  const fields = ["ns_pct","gm_pct","apc_pct","pwp_pct","psm_pct","sertis_pct","std_pct","member_pct","nsb_pct","penawaran_pct"];
+  fields.forEach(f=>{
+    const order = [...stores].sort((a,b)=>(b[f]||0)-(a[f]||0));
+    order.forEach((s,i)=> s[f+"_rank"] = i+1);
+  });
+}
+
+function renderAllStoreTable(){
+  computeStoreRanks(STORE_DATA);
+  renderAllStoreHeader();
+  const body = document.getElementById("allStoreBody");
+  const info = document.getElementById("storeFilterInfo");
+  if(!body) return;
+  if(!STORE_DATA.length){ body.innerHTML = `<tr><td class="placeholder-note">Belum ada data toko</td></tr>`; if(info) info.textContent=""; return; }
+  let sorted = [...STORE_DATA].sort((a,b)=>a.rank_area-b.rank_area);
+  const q = STORE_FILTER_TEXT.trim().toLowerCase();
+  if(q){
+    sorted = sorted.filter(s => (s.nama||"").toLowerCase().includes(q) || (s.kode||"").toString().toLowerCase().includes(q));
+  }
+  if(info){
+    info.textContent = q
+      ? `Menampilkan ${sorted.length} dari ${STORE_DATA.length} toko untuk pencarian "${STORE_FILTER_TEXT}"`
+      : `Menampilkan semua ${STORE_DATA.length} toko`;
+  }
+  if(!sorted.length){
+    body.innerHTML = `<tr><td colspan="99"><div class="placeholder-note">Tidak ada toko yang cocok dengan pencarian "${STORE_FILTER_TEXT}".</div></td></tr>`;
+    return;
+  }
+  body.innerHTML = sorted.map(s=>{
+    const cellPct = (v) => `<span style="color:${barColor(v)};font-weight:700;">${pctLabel(v)}</span>`;
+    const kekurangan = s.ns_target - s.ns_actual;
+    const estimasi = TF_VALUE ? (s.ns_actual / TF_VALUE) : s.ns_actual;
+    const estimasiPct = s.ns_target ? (estimasi/s.ns_target*100) : 0;
+    const kpiCells = STORE_KPI_SPECS.map(sp=>{
+      const rankVal = s[sp.rankField];
+      const rankBadge = (rankVal===undefined || rankVal===null) ? "-" :
+        `<span style="font-weight:800;${rankVal===1?'color:#0d7a3d;':'color:var(--navy-mid);'}">#${rankVal}</span>`;
+      return `<td class="num" style="white-space:nowrap;border-left:2px solid #f3f5fa;">${fmtNum(s[sp.t]||0, sp.unit)}</td>` +
+      `<td class="num" style="white-space:nowrap;">${fmtNum(s[sp.a]||0, sp.unit)}</td>` +
+      `<td class="num" style="white-space:nowrap;">${fmtSelisih(s[sp.a]||0, s[sp.t]||0, sp.unit)}</td>` +
+      `<td class="num" style="white-space:nowrap;text-align:center;">${rankBadge}</td>`;
+    }).join("");
+    return `<tr>
+      <td class="sticky-col1" style="font-weight:800;">${s.rank_area}</td>
+      <td class="sticky-col2" style="font-weight:700;" title="${s.nama}">${s.nama}</td>
+      <td class="num">${(TF_VALUE*100).toFixed(1)}%</td>
+      <td class="num" style="white-space:nowrap;color:${kekurangan>0?'#b53232':'#0d7a3d'};font-weight:700;">${kekurangan>0?fmtNum(kekurangan,"currency"):"Tercapai"}</td>
+      <td class="num" style="white-space:nowrap;">${fmtNum(estimasi,"currency")}<br><span style="color:${barColor(estimasiPct)};font-weight:800;">${pctLabel(estimasiPct)}</span></td>
+      <td class="num">${cellPct(s.ns_pct)}</td>
+      <td class="num">${cellPct(s.gm_pct)}</td>
+      <td class="num">${cellPct(s.apc_pct)}</td>
+      <td class="num">${cellPct(s.pwp_pct)}</td>
+      <td class="num">${cellPct(s.psm_pct)}</td>
+      <td class="num">${cellPct(s.sertis_pct)}</td>
+      <td class="num">${cellPct(s.std_pct)}</td>
+      <td class="num">${cellPct(s.member_pct)}</td>
+      <td class="num">${cellPct(s.penawaran_pct)}</td>
+      <td class="num" style="color:var(--muted);">${pctLabel(s.nsb_pct)}</td>
+      <td class="num" style="font-weight:800;">${s.total_rank_sum}</td>
+      ${kpiCells}
+    </tr>`;
+  }).join("");
+}
+
+function renderAll(){
+  renderHeaderKpis();
+  renderSummary();
+  renderStorePanels();
+  renderPanels();
+  renderAllStoreTable();
+  renderFocus();
+}
+
+/* ================= AUTO-SAVE / AUTO-LOAD (localStorage) ================= */
+// Setiap kali Excel baru diupload, data otomatis disimpan di browser (localStorage),
+// jadi walaupun tab ditutup / keluar dari web, data terakhir tetap ada saat dibuka lagi.
+function saveToStorage(){
+  try{
+    const payload = { tf: TF_VALUE, currentData: currentData, storeData: STORE_DATA, savedAt: new Date().toISOString() };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+  }catch(e){
+    console.warn("Auto-save gagal:", e.message);
+  }
+}
+function loadFromStorage(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    const payload = JSON.parse(raw);
+    if(!payload || !payload.currentData) return false;
+    TF_VALUE = payload.tf ?? TF_VALUE;
+    currentData = payload.currentData;
+    STORE_DATA = payload.storeData || [];
+    return true;
+  }catch(e){
+    console.warn("Auto-load gagal:", e.message);
+    return false;
+  }
+}
+function clearStorage(){
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+}
+
+loadFromStorage(); // pulihkan data terakhir (jika ada) sebelum render pertama kali
+renderAll();
+
+/* ================= EXCEL UPLOAD ================= */
+function normalizeKey(str){
+  return String(str||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+}
+const LOOKUP = {};
+Object.keys(DEFAULT_DATA).forEach(k=>{
+  LOOKUP[normalizeKey(k)] = k;
+  LOOKUP[normalizeKey(DEFAULT_DATA[k].label)] = k;
+});
+
+function cellStr(v){ return (v===null||v===undefined) ? "" : String(v).trim().toUpperCase(); }
+function findAnchor(row, text, exact){
+  for(let c=0;c<row.length;c++){
+    const t = cellStr(row[c]);
+    if(exact ? t===text : t.includes(text)) return c;
+  }
+  return -1;
+}
+function toNum(v){ const n = parseFloat(v); return isNaN(n) ? 0 : n; }
+
+// Coba parse format IKT asli (sheet "ikt area hasan" / sejenis, dengan header 2-baris NO|KODE|NAMA TOKO|...)
+function tryParseIkt(workbook){
+  let targetSheetName = null, aoa = null, headerRowIdx = -1;
+  for(const name of workbook.SheetNames){
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[name], {header:1, defval:null, raw:true});
+    for(let r=0;r<Math.min(rows.length,10);r++){
+      const idx = findAnchor(rows[r], "NAMA TOKO", true);
+      if(idx>=0){ targetSheetName = name; aoa = rows; headerRowIdx = r; break; }
+    }
+    if(aoa) break;
+  }
+  if(!aoa) return null; // bukan format IKT — biarkan fallback
+
+  const row2 = aoa[headerRowIdx];
+  const namaCol = findAnchor(row2, "NAMA TOKO", true);
+  const kodeCol = findAnchor(row2, "KODE", true);
+
+  // TF (Time Factor) — biasanya di baris pertama sheet, format: "TF" | angka desimal
+  let tf = TF_VALUE;
+  for(const r of aoa.slice(0,4)){
+    if(r && cellStr(r[0])==="TF" && typeof r[1]==="number" && r[1]>0 && r[1]<=1){ tf = r[1]; break; }
+  }
+
+  const anchors = {
+    ns:      findAnchor(row2, "NET SALES"),
+    gm:      findAnchor(row2, "GM"),
+    apc:     findAnchor(row2, "APC"),
+    pwp:     findAnchor(row2, "PWP"),
+    psm:     findAnchor(row2, "PSM"),
+    sertis:  findAnchor(row2, "SERTIS")>=0 ? findAnchor(row2,"SERTIS") : findAnchor(row2,"SERBA GRATIS"),
+    nsb:     findAnchor(row2, "NSB"),
+    std:     findAnchor(row2, "STD"),
+    member:  findAnchor(row2, "MEMBER", true),
+  };
+  // offset relatif (target, actual, pct, rank) dari kolom anchor, sesuai template
+  const OFF = {
+    ns:     {t:0, a:2, p:4},
+    gm:     {t:1, a:3, p:5},
+    apc:    {t:0, a:1, p:3},
+    pwp:    {t:0, a:1, p:3},
+    psm:    {t:0, a:1, p:3},
+    sertis: {t:0, a:1, p:3},
+    nsb:    {t:1, a:2, p:4},
+    std:    {t:0, a:1, p:3},
+    member: {t:0, a:2, p:6},
+  };
+
+  function col(key, part){ const anchor = anchors[key]; if(anchor<0) return -1; return anchor + OFF[key][part]; }
+
+  // cari baris data: mulai setelah header, selama NAMA TOKO terisi & NO numerik
+  const stores = [];
+  for(let r=headerRowIdx+2; r<Math.min(aoa.length, headerRowIdx+40); r++){
+    const row = aoa[r];
+    if(!row) continue;
+    const nama = row[namaCol];
+    if(!nama || typeof nama !== "string" || !nama.trim()) continue;
+    const get = (key,part)=> { const c = col(key,part); return c<0 ? null : row[c]; };
+    const ns_t = toNum(get("ns","t")), ns_a = toNum(get("ns","a"));
+    const gm_t = toNum(get("gm","t")), gm_a = toNum(get("gm","a"));
+    const apc_t = toNum(get("apc","t")), apc_a = toNum(get("apc","a"));
+    const pwp_t = toNum(get("pwp","t")), pwp_a = toNum(get("pwp","a"));
+    const psm_t = toNum(get("psm","t")), psm_a = toNum(get("psm","a"));
+    const sg_t = toNum(get("sertis","t")), sg_a = toNum(get("sertis","a"));
+    const nsb_t = toNum(get("nsb","t")), nsb_a = toNum(get("nsb","a"));
+    const std_t = toNum(get("std","t")), std_a = toNum(get("std","a"));
+    const mem_t = toNum(get("member","t")), mem_a = toNum(get("member","a"));
+    if(!ns_t && !apc_t && !pwp_t) continue; // baris kosong/rusak, lewati
+    const pct = (a,t)=> t ? (a/t*100) : 0;
+    stores.push({
+      kode: row[kodeCol], nama: nama.trim(),
+      ns_target: ns_t, ns_actual: ns_a, ns_pct: pct(ns_a,ns_t),
+      gm_target_pct: gm_t, gm_actual_pct: gm_a, gm_pct: pct(gm_a,gm_t),
+      apc_target: apc_t, apc_actual: apc_a, apc_pct: pct(apc_a,apc_t),
+      pwp_target: pwp_t, pwp_actual: pwp_a, pwp_pct: pct(pwp_a,pwp_t),
+      psm_target: psm_t, psm_actual: psm_a, psm_pct: pct(psm_a,psm_t),
+      sertis_target: sg_t, sertis_actual: sg_a, sertis_pct: pct(sg_a,sg_t),
+      nsb_target: nsb_t, nsb_actual: nsb_a, nsb_pct: pct(nsb_a,nsb_t),
+      std_target: std_t, std_actual: std_a, std_pct: pct(std_a,std_t),
+      member_target: mem_t, member_actual: mem_a, member_pct: pct(mem_a,mem_t),
+    });
+  }
+  if(stores.length < 3) return null; // terlalu sedikit baris terbaca, kemungkinan salah format
+
+  // Penawaran Langsung per toko = point APC+PWP+PSM+Sertis (bobot 25/25/20/30)
+  stores.forEach(s=>{ s.penawaran_pct = s.apc_pct*0.25 + s.pwp_pct*0.25 + s.psm_pct*0.20 + s.sertis_pct*0.30; });
+
+  // rank per indikator (kecuali NSB), lalu jumlahkan -> rank total terkecil = terbaik
+  const RANK_FIELDS = ["ns_pct","gm_pct","apc_pct","pwp_pct","psm_pct","sertis_pct","std_pct","member_pct","penawaran_pct"];
+  RANK_FIELDS.forEach(f=>{
+    const order = [...stores].sort((a,b)=>b[f]-a[f]);
+    order.forEach((s,i)=> s[f+"_rank"] = i+1);
+  });
+  stores.forEach(s=>{ s.total_rank_sum = RANK_FIELDS.reduce((sum,f)=> sum + s[f+"_rank"], 0); });
+  const order = [...stores].sort((a,b)=>a.total_rank_sum-b.total_rank_sum);
+  order.forEach((s,i)=> s.rank_area = i+1);
+
+  // agregat area
+  const sum = (f)=> stores.reduce((t,s)=>t+s[f],0);
+  const avg = (f)=> sum(f)/stores.length;
+  return {
+    tf,
+    stores,
+    area: {
+      ns_target: sum("ns_target"), ns_actual: sum("ns_actual"),
+      gm_target: avg("gm_target_pct"), gm_actual: avg("gm_actual_pct"),
+      apc_target: avg("apc_target"), apc_actual: avg("apc_actual"),
+      pwp_target: sum("pwp_target"), pwp_actual: sum("pwp_actual"),
+      psm_target: sum("psm_target"), psm_actual: sum("psm_actual"),
+      sg_target: sum("sertis_target"), sg_actual: sum("sertis_actual"),
+      nsb_target: sum("nsb_target"), nsb_actual: sum("nsb_actual"),
+    }
+  };
+}
+
+function applyIktResult(result){
+  TF_VALUE = result.tf;
+  STORE_DATA = result.stores;
+  const a = result.area;
+  currentData.net_sales_total.target = a.ns_target;
+  currentData.net_sales_total.actual = a.ns_actual;
+  currentData.gm.target = a.gm_target;
+  currentData.gm.actual = a.gm_actual;
+  currentData.apc.target = a.apc_target;
+  currentData.apc.actual = a.apc_actual;
+  currentData.pwp_total.target = a.pwp_target;
+  currentData.pwp_total.actual = a.pwp_actual;
+  currentData.psm_total.target = a.psm_target;
+  currentData.psm_total.actual = a.psm_actual;
+  currentData.sg_total.target = a.sg_target;
+  currentData.sg_total.actual = a.sg_actual;
+  currentData.nsb_contribution.target = a.nsb_target;
+  currentData.nsb_contribution.actual = a.nsb_actual;
+  const apcPct = a.apc_target ? a.apc_actual/a.apc_target*100 : 0;
+  const pwpPct = a.pwp_target ? a.pwp_actual/a.pwp_target*100 : 0;
+  const psmPct = a.psm_target ? a.psm_actual/a.psm_target*100 : 0;
+  const sgPct  = a.sg_target ? a.sg_actual/a.sg_target*100 : 0;
+  currentData.penawaran_langsung.target = 100;
+  currentData.penawaran_langsung.actual = apcPct*0.25 + pwpPct*0.25 + psmPct*0.20 + sgPct*0.30;
+  renderAll();
+}
+
+// Parser fallback: template sederhana Metrik | Target | Actual
+function tryParseSimpleTemplate(workbook){
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const rows = XLSX.utils.sheet_to_json(sheet, {defval:""});
+  let matched = 0;
+  rows.forEach(row=>{
+    const metricRaw = row["Metrik"] ?? row["Metric"] ?? row["Indikator"] ?? Object.values(row)[0];
+    const targetRaw = row["Target"];
+    const actualRaw = row["Actual"] ?? row["Aktual"];
+    const key = LOOKUP[normalizeKey(metricRaw)];
+    if(key){
+      if(targetRaw !== "" && targetRaw !== undefined) currentData[key].target = parseFloat(targetRaw);
+      if(actualRaw !== "" && actualRaw !== undefined) currentData[key].actual = parseFloat(actualRaw);
+      matched++;
+    }
+  });
+  return matched;
+}
+
+/* ================= FILTER NAMA TOKO ================= */
+document.getElementById("storeFilterInput").addEventListener("input", function(e){
+  STORE_FILTER_TEXT = e.target.value;
+  document.getElementById("storeFilterClear").style.display = STORE_FILTER_TEXT ? "block" : "none";
+  renderAllStoreTable();
+});
+document.getElementById("storeFilterClear").addEventListener("click", function(){
+  STORE_FILTER_TEXT = "";
+  document.getElementById("storeFilterInput").value = "";
+  this.style.display = "none";
+  renderAllStoreTable();
+});
+
+document.getElementById("fileInput").addEventListener("change", function(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(evt){
+    try{
+      const wb = XLSX.read(evt.target.result, {type:"binary"});
+      const ikt = tryParseIkt(wb);
+      if(ikt){
+        applyIktResult(ikt);
+        saveToStorage();
+        alert("Data " + ikt.stores.length + " toko + ringkasan area berhasil diperbarui dari file IKT (TF: " + (ikt.tf*100).toFixed(1) + "%) dan otomatis tersimpan di browser ini.");
+        return;
+      }
+      const matched = tryParseSimpleTemplate(wb);
+      renderAll();
+      if(matched>0){
+        saveToStorage();
+        alert(matched + " indikator berhasil diperbarui dari Excel dan otomatis tersimpan di browser ini.");
+      }else{
+        alert("Format file tidak dikenali. Gunakan file IKT area (dengan sheet berisi kolom NAMA TOKO), atau template sederhana Metrik | Target | Actual.");
+      }
+    }catch(err){
+      alert("Gagal membaca file: " + err.message);
+    }
+  };
+  reader.readAsBinaryString(file);
+});
+function resetData(){
+  currentData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+  STORE_DATA = JSON.parse(JSON.stringify(DEFAULT_STORE_DATA));
+  TF_VALUE = DEFAULT_TF;
+  STORE_FILTER_TEXT = "";
+  const fi = document.getElementById("storeFilterInput"); if(fi) fi.value = "";
+  const fc = document.getElementById("storeFilterClear"); if(fc) fc.style.display = "none";
+  clearStorage();
+  renderAll();
+  document.getElementById("fileInput").value = "";
+}
+</script>
+</body>
+</html>
